@@ -40,6 +40,29 @@ label {
   height: 90%;
 }
 
+.topology-filters {
+  background: #414141;
+  padding: 10px 10px 5px 10px;
+}
+
+.topology-filters .filter-form {
+  float: left;
+  margin-right: 5px;
+}
+
+.topology-filters .filter-form input {
+  width: 9em;
+}
+
+.topology-filters .btn-group {
+  margin-right: 5px;
+  margin-bottom: 5px;
+}
+
+.topology-filters #filter-list {
+  float: left;
+}
+
 .node-selection {
   cursor: crosshair;
 }
@@ -112,6 +135,11 @@ text {
   fill: yellow;
 }
 
+.filtered circle {
+  stroke: #337AB7;
+  stroke-width: 3;
+}
+
 .active circle {
   stroke: white;
   stroke-width: 3;
@@ -137,8 +165,6 @@ text {
 
 .links .ownership {
   stroke: #080;
-  /* comment to see ownership link */
-  display: none;
 }
 
 .nodes .state {

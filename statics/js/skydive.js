@@ -54,19 +54,79 @@ var Node = function(ID) {
   this.Host = '';
   this.Metadata = {};
   this.Edges = {};
-  this.Visible = true;
+  this.Active = false;
   this.Collapsed = false;
   this.Highlighted = false;
+  this.Filtered = false;
   this.Group = '';
 };
 
-Node.prototype.IsCaptureOn = function() {
-  return "State/FlowCapture" in this.Metadata && this.Metadata["State/FlowCapture"] == "ON";
-};
+Node.prototype = {
 
-Node.prototype.IsCaptureAllowed = function() {
-  var allowedTypes = ["device", "veth", "ovsbridge", "internal", "tun", "bridge"];
-  return allowedTypes.indexOf(this.Metadata.Type) >= 0;
+  IsCaptureOn: function() {
+    return "State/FlowCapture" in this.Metadata && this.Metadata["State/FlowCapture"] == "ON";
+  },
+
+  IsCaptureAllowed: function() {
+    var allowedTypes = ["device", "veth", "ovsbridge", "internal", "tun", "bridge"];
+    return allowedTypes.indexOf(this.Metadata.Type) >= 0;
+  },
+
+  _visible: true,
+
+  set Visible(bool) {
+    this._visible = bool;
+    for (var i in this.Edges) {
+      this.Edges[i].UpdateVisibility();
+    }
+  },
+
+  get Visible() {
+    return this._visible;
+  },
+
+  get Size() {
+    var size = 16;
+    switch(this.Metadata.Type) {
+      case "host":
+        size = 22;
+      case "port":
+      case "ovsport":
+        size = 18;
+      case "switch":
+      case "ovsbridge":
+        size = 20;
+    }
+
+    // increase the size since there will
+    // be a stroke of 3px
+    if (this.Filtered || this.Active)
+      size += 3;
+
+    return size;
+  },
+
+  get Style() {
+    clazz = "node " + this.Metadata.Type;
+
+    if (this.ID in alerts)
+      clazz += " alert";
+
+    if (this.Metadata.State == "DOWN")
+      clazz += " down";
+
+    if (this.Highlighted)
+      clazz = "highlighted " + clazz;
+
+    if (this.Filtered)
+      clazz = "filtered " + clazz;
+
+    if (this.Active)
+      clazz = "active " + clazz;
+
+    return clazz;
+  }
+
 };
 
 var Edge = function(ID) {
@@ -75,7 +135,28 @@ var Edge = function(ID) {
   this.Parent = '';
   this.Child = '';
   this.Metadata = {};
-  this.Visible = true;
+};
+
+Edge.prototype = {
+
+  _visible: true,
+
+  get Visible() {
+    // comment to see ownership links
+    if (this.Metadata.RelationType == "ownership")
+      return false;
+    return this._visible;
+  },
+
+  set Visible(bool) {
+    this._visible = bool;
+  },
+
+  // show edge if both nodes are visible
+  UpdateVisibility: function() {
+    this.Visible = this.Child.Visible && this.Parent.Visible;
+  }
+
 };
 
 var Graph = function(ID) {
@@ -136,12 +217,13 @@ Graph.prototype.GetEdge = function(ID) {
   return this.Edges[ID];
 };
 
-Graph.prototype.NewEdge = function(ID, parent, child, host) {
+Graph.prototype.NewEdge = function(ID, parent, child, host, metadata) {
   var edge = new Edge(ID);
   edge.Parent = parent;
   edge.Child = child;
   edge.Graph = this;
   edge.Host = host;
+  edge.Metadata = metadata || {};
 
   this.Edges[ID] = edge;
 
@@ -184,11 +266,8 @@ Graph.prototype.InitFromSyncMessage = function(msg) {
     var parent = this.GetNode(e.Parent);
     var child = this.GetNode(e.Child);
 
-    var edge = this.NewEdge(e.ID, parent, child);
-
-    if ("Metadata" in e)
-      edge.Metadata = e.Metadata;
-    edge.Host = e.Host;
+    var edge = this.NewEdge(e.ID, parent, child, e.host,
+                            e.Metadata || {});
   }
 };
 
@@ -440,6 +519,7 @@ function ShowNodeFlows(node) {
 
 Layout.prototype.NodeDetails = function(node) {
   CurrentNodeDetails = node;
+
   $("#node-details").show();
 
   var json = JSON.stringify(node.Metadata);
@@ -465,6 +545,8 @@ Layout.prototype.AddNode = function(node) {
   if (node.ID in this.elements)
     return;
 
+  node = vueTopology.applyTopologyFiltersNode(node);
+
   this.elements[node.ID] = node;
 
   // distribute node on a circle depending on the host
@@ -479,6 +561,8 @@ Layout.prototype.AddNode = function(node) {
 
 Layout.prototype.UpdateNode = function(node, metadata) {
   node.Metadata = metadata;
+
+  node = vueTopology.applyTopologyFiltersNode(node);
 
   if (typeof CurrentNodeDetails != "undefined" && node.ID == CurrentNodeDetails.ID)
     this.NodeDetails(node);
@@ -626,21 +710,6 @@ Layout.prototype.CircleSize = function(d) {
 
 Layout.prototype.GroupClass = function(d) {
   return "group " + d.Type;
-};
-
-Layout.prototype.NodeClass = function(d) {
-  clazz = "node " + d.Metadata.Type;
-
-  if (d.ID in alerts)
-    clazz += " alert";
-
-  if (d.Metadata.State == "DOWN")
-    clazz += " down";
-
-  if (d.Highlighted)
-    clazz = "highlighted " + clazz;
-
-  return clazz;
 };
 
 Layout.prototype.EdgeClass = function(d) {
@@ -914,7 +983,10 @@ Layout.prototype.CollapseNode = function(d) {
 Layout.prototype.Redraw = function() {
   var _this = this;
 
-  this.link = this.link.data(this.links, function(d) { return d.source.ID + "-" + d.target.ID; });
+  this.link = this.link.data(
+    this.links.filter(function(l) { return l.edge.Visible; }),
+    function(d) { return d.source.ID + "-" + d.target.ID; }
+  );
   this.link.exit().remove();
 
   this.link.enter().append("path")
@@ -926,18 +998,14 @@ Layout.prototype.Redraw = function() {
       return _this.EdgeClass(d);
     });
 
-  this.node = this.node.data(this.nodes, function(d) { return d.ID; })
-    .attr("id", function(d) { return "node-" + d.ID; })
-    .attr("class", function(d) {
-      return _this.NodeClass(d);
-    })
-    .style("display", function(d) {
-      return !d.Visible ? "none" : "block";
-    });
+  this.node = this.node.data(
+    this.nodes.filter(function(e) { return e.Visible; }),
+    function(d) { return d.ID; }
+  );
   this.node.exit().remove();
 
   var nodeEnter = this.node.enter().append("g")
-    .attr("class", "node")
+    .attr("id", function(d) { return "node-" + d.ID; })
     .on("click", function(d) {
       // node selection callback registered, so in selection mode
       if (nodeSelectedCallback) {
@@ -956,13 +1024,15 @@ Layout.prototype.Redraw = function() {
 
       if (CurrentNodeDetails) {
         var old = d3.select('#node-' + CurrentNodeDetails.ID);
-        old.classed('active', false);
-        old.select('circle').attr('r', parseInt(old.select('circle').attr('r')) - 3);
+        CurrentNodeDetails.Active = false;
+        old.attr("class", CurrentNodeDetails.Style);
+        old.select("circle").attr("r", CurrentNodeDetails.Size);
       }
       _this.NodeDetails(d);
       var current = d3.select(this);
-      current.classed('active', true);
-      current.select('circle').attr('r', parseInt(current.select('circle').attr('r')) + 3);
+      d.Active = true;
+      current.attr("class", d.Style);
+      current.select("circle").attr("r", d.Size);
     })
     .on("dblclick", function(d) {
       return _this.CollapseNode(d);
@@ -970,7 +1040,6 @@ Layout.prototype.Redraw = function() {
     .call(this.drag);
 
   nodeEnter.append("circle")
-    .attr("r", this.CircleSize)
     .attr("class", "circle")
     .style("opacity", function(d) {
       return _this.CircleOpacity(d);
@@ -1041,6 +1110,10 @@ Layout.prototype.Redraw = function() {
     .attr("d", function(d) {
       return _this.DrawCluster(d);
     });
+
+  // refresh styles
+  this.node.attr("class", function(d) { return d.Style; });
+  this.node.selectAll("circle").attr("r", function(d) { return d.Size; });
 
   this.node.select('text')
     .text(function(d){
@@ -1118,9 +1191,8 @@ Layout.prototype.ProcessGraphMessage = function(msg) {
       var parent = this.graph.GetNode(msg.Obj.Parent);
       var child = this.graph.GetNode(msg.Obj.Child);
 
-      edge = this.graph.NewEdge(msg.Obj.ID, parent, child, msg.Obj.Host);
-      if ("Metadata" in msg.Obj)
-        edge.Metadata = msg.Obj.Metadata;
+      edge = this.graph.NewEdge(msg.Obj.ID, parent, child,
+                                msg.Obj.Host, msg.Obj.Metadata || {});
 
       this.AddEdge(edge);
       break;
@@ -1719,6 +1791,7 @@ function SetupControlButtons() {
 }
 
 $(document).ready(function() {
+
   if (Service == "agent") {
     AgentReady();
   }
@@ -1745,6 +1818,8 @@ $(document).ready(function() {
 
   $('.conversation').hide();
   $('.discovery').hide();
+  
+  vueTopology = new Vue(VueTopology);
 
   topologyLayout = new Layout(".topology-d3");
   topologyLayout.StartLiveUpdate();
@@ -1761,4 +1836,5 @@ $(document).ready(function() {
     SetupControlButtons();
     SetupPacketGenerator();
   }
+
 });
