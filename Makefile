@@ -19,7 +19,7 @@ DOCKER_TAG?=devel
 	protoc --go_out . ${PROTO_FILES}
 
 .bindata: govendor builddep
-	go-bindata -nometadata -o statics/bindata.go -pkg=statics -ignore=bindata.go statics/* statics/css/images/*
+	go-bindata -nometadata -o statics/bindata.go -pkg=statics -ignore=bindata.go statics/* statics/css/images/* statics/js/components/*
 	gofmt -w -s statics/bindata.go
 
 all: govendor genlocalfiles
