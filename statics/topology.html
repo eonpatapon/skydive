@@ -93,6 +93,8 @@
       </div>
       <div class="topology-filters col-sm-12">
         <filter-list ref="topologyFilters"
+                     label-placeholder="node metadata"
+                     value-placeholder="value"
                      @update="applyTopologyFilters"
                      :key-suggestions="topologyFiltersKeys"
                      :value-suggestions="topologyFiltersValues">
@@ -209,6 +211,8 @@
             </div>
             <div style="clear: both">
               <filter-list ref="flowFilters"
+                           label-placeholder="flow property"
+                           value-placeholder="value"
                            @update="applyFlowFilters"
                            :key-suggestions="flowFiltersKeys"
                            :value-suggestions="flowFiltersValues">

@@ -3,6 +3,7 @@ Vue.component('autocomplete', {
   template: '\
     <div style="position:relative" v-bind:class="{\'open\':openSuggestion}">\
         <input class="form-control input-sm" type="text"\
+               :placeholder="placeholder"\
                :value="value"\
                @keydown.enter.prevent="enter"\
                @keydown.tab="complete"\
@@ -31,6 +32,10 @@ Vue.component('autocomplete', {
       // can be Array or Function 
       // that returns a promise
       required: true,
+    },
+
+    placeholder: {
+      type: String,
     },
 
   },

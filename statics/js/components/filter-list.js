@@ -29,11 +29,13 @@ Vue.component('filter-list', {
           <form class="form-inline" @submit.prevent="add(label, value)">\
             <div class="form-group">\
               <autocomplete :suggestions="suggestedKeys"\
+                            :placeholder="labelPlaceholder"\
                             v-model="label"\
               ></autocomplete>\
             </div>\
             <div class="form-group">\
               <autocomplete :suggestions="suggestedValues"\
+                            :placeholder="valuePlaceholder"\
                             v-model="value"\
                             @select="add(label, value)"\
               ></autocomplete>\
@@ -70,6 +72,12 @@ Vue.component('filter-list', {
     },
     valueSuggestions: {
       type: Function
+    },
+    labelPlaceholder: {
+      type: String
+    },
+    valuePlaceholder: {
+      type: String
     }
   },
 
