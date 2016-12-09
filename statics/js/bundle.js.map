@@ -1,0 +1,1 @@
+{"version":3,"names":[],"mappings":"","sources":["main.js"],"sourcesContent":["var Vue = require('vue');\nVue.component('autocomplete', require('./components/autocomplete.vue'));\nVue.component('filter-list', require('./components/filter-list.vue'));\nVue.component('capture-form', require('./components/capture-form.vue'));\n\nmodule.exports = Vue;\n"],"file":"bundle.js"}
