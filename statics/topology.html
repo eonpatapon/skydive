@@ -39,6 +39,8 @@
   <script src="statics/js/vue.js"></script>
   <script src="statics/js/components/filter-list.js"></script>
   <script src="statics/js/components/autocomplete.js"></script>
+  <script src="statics/js/components/node-selector.js"></script>
+  <script src="statics/js/components/capture-form.js"></script>
   <script src="statics/js/vue-topology.js"></script>
   <script src="statics/js/vue-sidebar.js"></script>
 
@@ -127,37 +129,7 @@
                   </div>
                 </div>
                 <div id="capture">
-                  <div class="sub-left-panel" style="clear: both">
-                    <div class="title-left-panel">New Capture :</div>
-                    <form action="#" id="capture_form">
-                      <label>Name : </label></br>
-                      <input type="text" id="capture-name" class="capture_input"/><br/>
-                      <label>Description : </label></br>
-                      <textarea type="text" id="capture-desc" class="capture_input" rows="4"></textarea><br/>
-
-                      <label>Target : </label></br>
-                      <label class="radio-inline"><input type="radio" name="capture-target" value="selection" checked>Nodes selection</label>
-                      <label class="radio-inline"><input type="radio" name="capture-target" value="gremlin">Gremlin Expression</label>
-                      <div id="capture-selection">
-                        <div style="position:relative">
-                          <input class="form-control input-sm has-left-icon node-selector" id="capture-node1" placeholder="Node 1" readonly>
-                          <span class="fa fa-crosshairs form-control-feedback"></span>
-                        </div>
-                        </br>
-                        <div style="position:relative">
-                          <input class="form-control input-sm has-left-icon node-selector" id="capture-node2" placeholder="Node 2 (optional)" readonly>
-                          <span class="fa fa-crosshairs form-control-feedback"></span>
-                        </div>
-                      </div>
-                      <br/>
-                      <div id="capture-gremlin" style="display: none">
-                        <textarea type="text" id="capture-query" class="capture_input" required></textarea><br/>
-                      </div>
-                      <input type="button" class="btn btn-primary" id="capture-create" value="Start"/>
-                      <input type="button" class="btn btn-danger" id="capture-cancel" value="Cancel"/>
-                      <br/>
-                    </form>
-                  </div>
+                  <capture-form ref="captureForm"></capture-form>
                 </div>
               </div>
             </div>
