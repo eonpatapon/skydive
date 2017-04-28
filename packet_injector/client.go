@@ -32,6 +32,7 @@ import (
 
 	shttp "github.com/skydive-project/skydive/http"
 	"github.com/skydive-project/skydive/logging"
+	"github.com/skydive-project/skydive/packet_injector/common"
 )
 
 type PacketInjectorClient struct {
@@ -63,7 +64,7 @@ func (pc *PacketInjectorClient) OnMessage(c *shttp.WSClient, m shttp.WSMessage) 
 	}
 }
 
-func (pc *PacketInjectorClient) injectPacket(host string, pp *PacketParams) error {
+func (pc *PacketInjectorClient) injectPacket(host string, pp *packet_injector_common.PacketParams) error {
 	msg := shttp.NewWSMessage(Namespace, "PIRequest", pp)
 
 	ch := make(chan error)
@@ -92,7 +93,7 @@ func (pc *PacketInjectorClient) injectPacket(host string, pp *PacketParams) erro
 	return err
 }
 
-func (pc *PacketInjectorClient) InjectPacket(host string, pp *PacketParams) error {
+func (pc *PacketInjectorClient) InjectPacket(host string, pp *packet_injector_common.PacketParams) error {
 	if err := pc.injectPacket(host, pp); err != nil {
 		logging.GetLogger().Errorf(err.Error())
 		return err

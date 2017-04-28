@@ -30,6 +30,9 @@ import (
 	"github.com/skydive-project/skydive/common"
 	shttp "github.com/skydive-project/skydive/http"
 	"github.com/skydive-project/skydive/logging"
+	"github.com/skydive-project/skydive/packet_injector/common"
+	"github.com/skydive-project/skydive/packet_injector/opencontrail"
+	"github.com/skydive-project/skydive/packet_injector/pcap"
 	"github.com/skydive-project/skydive/topology/graph"
 )
 
@@ -44,15 +47,34 @@ type PacketInjectorServer struct {
 }
 
 func (pis *PacketInjectorServer) injectPacket(msg shttp.WSMessage) error {
-	var params PacketParams
+	var params packet_injector_common.PacketParams
 	if err := common.JsonDecode(bytes.NewBuffer([]byte(*msg.Obj)), &params); err != nil {
 		return fmt.Errorf("Unable to decode packet inject param message %v", msg)
 	}
 
-	if err := InjectPacket(&params, pis.Graph); err != nil {
-		return fmt.Errorf("Failed to inject packet: %s", err.Error())
+	pis.Graph.RLock()
+	defer pis.Graph.RUnlock()
+	srcNode := pis.Graph.GetNode(params.SrcNodeID)
+
+	method, ok := srcNode.Metadata()["PIMethod"]
+	if !ok {
+		method = "pcap"
 	}
-	return nil
+
+	switch method {
+	case "opencontrail":
+		if err := opencontrail_injector.InjectPacket(&params, pis.Graph); err != nil {
+			return fmt.Errorf("Failed to inject packet: %s", err.Error())
+		}
+		return nil
+	case "pcap":
+		if err := pcap_injector.InjectPacket(&params, pis.Graph); err != nil {
+			return fmt.Errorf("Failed to inject packet: %s", err.Error())
+		}
+		return nil
+	default:
+		return fmt.Errorf("Method %s not available", method)
+	}
 }
 
 func (pis *PacketInjectorServer) OnMessage(c *shttp.WSAsyncClient, msg shttp.WSMessage) {

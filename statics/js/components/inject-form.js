@@ -10,7 +10,16 @@ Vue.component('inject-form', {
         <label for="inject-type">Type</label>\
         <select id="inject-type" v-model="type" class="form-control input-sm">\
           <option value="icmp">ICMPv4/Echo request</option>\
+          <option value="tcp">TCP ping</option>\
         </select>\
+      </div>\
+      <div class="form-group" v-if="type == \'tcp\'">\
+        <label for="inject-src-port">Src Port</label>\
+        <input id="inject-src-port" type="number" class="form-control input-sm" v-model="srcPort" min="1" />\
+      </div>\
+      <div class="form-group" v-if="type == \'tcp\'">\
+        <label for="inject-dst-port">Dst Port</label>\
+        <input id="inject-dst-port" type="number" class="form-control input-sm" v-model="dstPort" min="1" />\
       </div>\
       <div class="form-group">\
         <label>Target</label>\
@@ -37,6 +46,8 @@ Vue.component('inject-form', {
       node2: "",
       count: 1,
       type: "icmp",
+      srcPort: 0,
+      dstPort: 0,
     };
   },
 
@@ -115,6 +126,8 @@ Vue.component('inject-form', {
         data: JSON.stringify({
           "Src": "G.V('" + this.node1 + "')",
           "Dst": "G.V('" + this.node2 + "')",
+          "SrcPort": this.srcPort,
+          "DstPort": this.dstPort,
           "Type": this.type,
           "Count": this.count
         }),

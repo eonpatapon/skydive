@@ -987,10 +987,10 @@
 			"revisionTime": "2017-03-28T08:08:32Z"
 		},
 		{
-			"checksumSHA1": "ccMHhIHDv9TFYnNfikxKtD6uMXA=",
+			"checksumSHA1": "+gxvDX0fiULq4pKPV+5KQyPVoHs=",
 			"path": "github.com/nlewo/contrail-introspect-cli/descriptions",
-			"revision": "d18f119e1cc10d72c9bcacdc680c818dede04f69",
-			"revisionTime": "2016-10-03T13:57:36Z"
+			"revision": "2196e66a7317b2f109fb5aa311a71a91231c096a",
+			"revisionTime": "2017-03-28T08:08:32Z"
 		},
 		{
 			"checksumSHA1": "dc8PNRlEB9pbEJiJHjitlcJvH2I=",
@@ -1475,6 +1475,12 @@
 			"path": "gopkg.in/sourcemap.v1/base64vlq",
 			"revision": "eef8f47ab679652a7d3a4ee34c34314d255d2536",
 			"revisionTime": "2016-06-02T08:55:44Z"
+		},
+		{
+			"checksumSHA1": "exMnsyei9H9PgttMUskof6S2554=",
+			"path": "gopkg.in/urfave/cli.v2",
+			"revision": "e485446237011b8abac93919242e6f059ad56c87",
+			"revisionTime": "2016-10-29T22:39:47Z"
 		},
 		{
 			"checksumSHA1": "jXDje+kqCATfVXkT6fCZA14Sd6g=",

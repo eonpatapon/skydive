@@ -20,18 +20,18 @@
  *
  */
 
-package packet_injector
+package pcap_injector
 
 import (
 	"errors"
 	"fmt"
 	"net"
-	"strings"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 
+	"github.com/skydive-project/skydive/packet_injector/common"
 	"github.com/skydive-project/skydive/topology"
 	"github.com/skydive-project/skydive/topology/graph"
 )
@@ -43,36 +43,62 @@ var (
 	}
 )
 
-type PacketParams struct {
-	SrcNodeID graph.Identifier `valid:"nonzero"`
-	SrcIP     string           `valid:"nonzero"`
-	SrcMAC    string           `valid:"nonzero"`
-	DstIP     string           `valid:"nonzero"`
-	DstMAC    string           `valid:"nonzero"`
-	Type      string           `valid:"nonzero"`
-	Payload   string
-	Count     int `valid:"nonzero"`
-}
+func InjectPacket(pp *packet_injector_common.PacketParams, g *graph.Graph) error {
+	var srcIP net.IP
+	var dstIP net.IP
+	var srcMAC net.HardwareAddr
+	var dstMAC net.HardwareAddr
 
-func InjectPacket(pp *PacketParams, g *graph.Graph) error {
-	srcIP := getIP(pp.SrcIP)
+	g.RLock()
+	defer g.RUnlock()
+	srcNode := g.GetNode(pp.SrcNodeID)
+	dstNode := g.GetNode(pp.DstNodeID)
+	if srcNode == nil {
+		return errors.New("Unable to find source node")
+	}
+
+	if pp.SrcIP == "" {
+		nodeIP, _ := srcNode.GetFieldString("IPv4")
+		srcIP = packet_injector_common.GetIP(nodeIP)
+	} else {
+		srcIP = packet_injector_common.GetIP(pp.SrcIP)
+	}
+
 	if srcIP == nil {
 		return errors.New("Source Node doesn't have proper IP")
 	}
 
-	dstIP := getIP(pp.DstIP)
-	if dstIP == nil {
-		return errors.New("Destination Node doesn't have proper IP")
+	if pp.DstIP == "" {
+		nodeIP, _ := dstNode.GetFieldString("IPv4")
+		dstIP = packet_injector_common.GetIP(nodeIP)
+	} else {
+		dstIP = packet_injector_common.GetIP(pp.DstIP)
 	}
 
-	srcMAC, err := net.ParseMAC(pp.SrcMAC)
-	if err != nil || srcMAC == nil {
+	if dstIP == nil {
+		return errors.New("Destination doesn't have proper IP")
+	}
+
+	if pp.SrcMAC == "" {
+		nodeMAC, _ := srcNode.GetFieldString("MAC")
+		srcMAC = packet_injector_common.GetMAC(nodeMAC)
+	} else {
+		srcMAC = packet_injector_common.GetMAC(pp.SrcMAC)
+	}
+
+	if srcMAC == nil {
 		return errors.New("Source Node doesn't have proper MAC")
 	}
 
-	dstMAC, err := net.ParseMAC(pp.DstMAC)
-	if err != nil || dstMAC == nil {
-		return errors.New("Destination Node doesn't have proper MAC")
+	if pp.DstMAC == "" {
+		nodeMAC, _ := dstNode.GetFieldString("MAC")
+		dstMAC = packet_injector_common.GetMAC(nodeMAC)
+	} else {
+		dstMAC = packet_injector_common.GetMAC(pp.DstMAC)
+	}
+
+	if dstMAC == nil {
+		return errors.New("Destination doesn't have proper MAC")
 	}
 
 	//create packet
@@ -95,20 +121,10 @@ func InjectPacket(pp *PacketParams, g *graph.Graph) error {
 		return fmt.Errorf("Unsupported traffic type '%s'", pp.Type)
 	}
 
-	g.RLock()
-
-	srcNode := g.GetNode(pp.SrcNodeID)
-	if srcNode == nil {
-		g.RUnlock()
-		return errors.New("Unable to find source node")
-	}
-
 	ifName, _ := srcNode.GetFieldString("Name")
 
 	nscontext, err := topology.NewNetNSContextByNode(g, srcNode)
 	defer nscontext.Close()
-
-	g.RUnlock()
 
 	if err != nil {
 		return err
@@ -128,17 +144,4 @@ func InjectPacket(pp *PacketParams, g *graph.Graph) error {
 	}
 
 	return nil
-}
-
-func getIP(cidr string) net.IP {
-	if len(cidr) <= 0 {
-		return nil
-	}
-	ips := strings.Split(cidr, ",")
-	//TODO(masco): currently taking first IP, need to implement to select a proper IP
-	ip, _, err := net.ParseCIDR(ips[0])
-	if err != nil {
-		return nil
-	}
-	return ip
 }

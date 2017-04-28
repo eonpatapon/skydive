@@ -30,6 +30,7 @@ import (
 	"github.com/abbot/go-http-auth"
 	shttp "github.com/skydive-project/skydive/http"
 	"github.com/skydive-project/skydive/packet_injector"
+	"github.com/skydive-project/skydive/packet_injector/common"
 	"github.com/skydive-project/skydive/topology"
 	"github.com/skydive-project/skydive/topology/graph"
 	"github.com/skydive-project/skydive/validator"
@@ -52,77 +53,41 @@ type PacketParamsReq struct {
 	Count   int
 }
 
-func (pi *PacketInjectorAPI) requestToParams(ppr *PacketParamsReq) (string, *packet_injector.PacketParams, error) {
+func (pi *PacketInjectorAPI) requestToParams(ppr *PacketParamsReq) (string, *packet_injector_common.PacketParams, error) {
 	pi.Graph.RLock()
 	defer pi.Graph.RUnlock()
 
 	srcNode := pi.getNode(ppr.Src)
 	dstNode := pi.getNode(ppr.Dst)
 
-	if ppr.SrcIP == "" {
-		if srcNode != nil {
-			ip, _ := srcNode.GetFieldString("IPV4")
-			if ip == "" {
-				return "", nil, errors.New("No source IP in node and user input")
-			}
-			ppr.SrcIP = ip
-		} else {
-			return "", nil, errors.New("Not able to find a source node and source IP also empty")
-		}
+	if srcNode == nil {
+		return "", nil, errors.New("Not able to find source node")
 	}
 
-	if ppr.DstIP == "" {
-		if dstNode != nil {
-			ip, _ := dstNode.GetFieldString("IPV4")
-			if ip == "" {
-				return "", nil, errors.New("No dest IP in node and user input")
-			}
-			ppr.DstIP = ip
-		} else {
-			return "", nil, errors.New("Not able to find a dest node and dest IP also empty")
-		}
+	if ppr.DstIP == "" && dstNode == nil {
+		return "", nil, errors.New("Not able to find a dest node and dest IP also empty")
 	}
 
-	if ppr.SrcMAC == "" {
-		if srcNode != nil {
-			mac, _ := srcNode.GetFieldString("MAC")
-			if mac == "" {
-				return "", nil, errors.New("No source MAC in node and user input")
-			}
-			ppr.SrcMAC = mac
-		} else {
-			return "", nil, errors.New("Not able to find a source node and source MAC also empty")
-		}
+	if ppr.DstMAC == "" && dstNode == nil {
+		return "", nil, errors.New("Not able to find a dest node and dest MAC also empty")
 	}
 
-	if ppr.DstMAC == "" {
-		if dstNode != nil {
-			mac, _ := dstNode.GetFieldString("MAC")
-			if mac == "" {
-				return "", nil, errors.New("No dest MAC in node and user input")
-			}
-			ppr.DstMAC = mac
-		} else {
-			return "", nil, errors.New("Not able to find a dest node and dest MAC also empty")
-		}
-	}
-
-	pp := &packet_injector.PacketParams{
+	pp := packet_injector_common.PacketParams{
 		SrcNodeID: srcNode.ID,
 		SrcIP:     ppr.SrcIP,
 		SrcMAC:    ppr.SrcMAC,
+		DstNodeID: dstNode.ID,
 		DstIP:     ppr.DstIP,
 		DstMAC:    ppr.DstMAC,
 		Type:      ppr.Type,
 		Payload:   ppr.Payload,
 		Count:     ppr.Count,
 	}
-
 	if errs := validator.Validate(pp); errs != nil {
 		return "", nil, errors.New("All the parms not set properly.")
 	}
 
-	return srcNode.Host(), pp, nil
+	return srcNode.Host(), &pp, nil
 }
 
 func (pi *PacketInjectorAPI) injectPacket(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
