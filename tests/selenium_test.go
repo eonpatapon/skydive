@@ -171,10 +171,7 @@ func TestSelenium(t *testing.T) {
 			return err
 		}
 
-		tid1, _ := node1.GetFieldString("TID")
-		tid2, _ := node2.GetFieldString("TID")
-
-		srcNode, err := wd.FindElement(selenium.ByXPATH, ".//*[@tid='"+tid1+"']")
+		srcNode, err := wd.FindElement(selenium.ByXPATH, ".//*[@id='node-"+string(node1.ID)+"']")
 		if err != nil || srcNode == nil {
 			return err
 		}
@@ -189,7 +186,7 @@ func TestSelenium(t *testing.T) {
 		if err := injectDst.Click(); err != nil {
 			return err
 		}
-		dstNode, err := wd.FindElement(selenium.ByXPATH, ".//*[@tid='"+tid2+"']")
+		dstNode, err := wd.FindElement(selenium.ByXPATH, ".//*[@id='node-"+string(node2.ID)+"']")
 		if err != nil || dstNode == nil {
 			return err
 		}
