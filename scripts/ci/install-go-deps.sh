@@ -2,6 +2,9 @@
 
 set -v
 
+sudo yum install -y https://www.rdoproject.org/repos/rdo-release.rpm
+sudo yum install -y perl-Graph-Easy
+
 export GOROOT=/opt/go
 export GOPATH=$WORKSPACE
 export PATH=$PATH:$GOROOT/bin
